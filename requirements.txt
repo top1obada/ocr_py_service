@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+easyocr
+torch
+numpy
+pillow
+opencv-python-headless
+pdf2image
