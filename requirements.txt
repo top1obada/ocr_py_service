@@ -1,9 +1,6 @@
 fastapi
 uvicorn
 python-multipart
-easyocr
-torch
-numpy
-pillow
-opencv-python-headless
+pytesseract
 pdf2image
+Pillow
