@@ -2,10 +2,15 @@
 FROM python:3.12-slim AS build
 WORKDIR /app
 
-# تثبيت الأدوات مع حزم اللغات (الأهم هنا إضافة tesseract-ocr-ara)
+# تثبيت الأدوات مع حزم اللغات (مع إجبار عدم استخدام cache)
 RUN apt-get update && \
-    apt-get install -y tesseract-ocr libtesseract-dev poppler-utils \
-    tesseract-ocr-ara tesseract-ocr-fra tesseract-ocr-eng && \
+    apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    libtesseract-dev \
+    poppler-utils \
+    tesseract-ocr-ara \
+    tesseract-ocr-eng \
+    tesseract-ocr-fra && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -17,12 +22,20 @@ COPY . .
 FROM python:3.12-slim
 WORKDIR /app
 
-# تثبيت الأدوات مع حزم اللغات
+# تثبيت الأدوات مع حزم اللغات (مع إجبار عدم استخدام cache)
 RUN apt-get update && \
-    apt-get install -y tesseract-ocr poppler-utils \
-    tesseract-ocr-ara tesseract-ocr-fra tesseract-ocr-eng && \
+    apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    poppler-utils \
+    tesseract-ocr-ara \
+    tesseract-ocr-eng \
+    tesseract-ocr-fra && \
     rm -rf /var/lib/apt/lists/*
 
+# تأكد من وجود اللغات المطلوبة
+RUN tesseract --list-langs
+
+# نسخ الملفات من مرحلة البناء
 COPY --from=build /install /usr/local
 COPY --from=build /app .
 
