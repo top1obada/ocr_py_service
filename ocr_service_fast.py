@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 class FastUniversalOCR:
-    def init(self):
+    def __init__(self):  # ✅ صح
         self.logger = logging.getLogger("FastUniversalOCR")
         self.default_languages = 'ara+eng+fra'
 
