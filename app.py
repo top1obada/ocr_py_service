@@ -33,3 +33,8 @@ async def debug_tesseract():
     """مسار لتشخيص حالة Tesseract"""
     status = await ocr.check_tesseract_status()
     return JSONResponse(status)
+
+
+@app.get("/test")
+async def test():
+    return {"message": "Hello World"}
