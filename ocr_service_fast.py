@@ -44,64 +44,116 @@ class FastUniversalOCR:
             self.logger.error(f"❌ خطأ في Tesseract: {e}")
 
     async def ocr_image_fast(self, image: Image.Image, languages=None):
+        """
+        استخراج النص من صورة
+        """
         try:
+            # تحديد اللغة - تأكد من أن اللغة المطلوبة موجودة أولاً
             if languages is None:
-                lang = self.default_languages
+                # استخدم الإنجليزية كلغة افتراضية بدلاً من العربية
+                lang = 'eng'
+                self.logger.info(f"🔍 استخدام اللغة الافتراضية: {lang}")
             else:
                 if isinstance(languages, list):
-                    lang = '+'.join(languages)
+                    # تأكد من أن العربية موجودة في القائمة
+                    if 'ar' in languages:
+                        # جرب العربية أولاً، لكن إذا فشلت استخدم الإنجليزية
+                        try:
+                            # اختبر إذا كانت العربية تعمل
+                            test_langs = pytesseract.get_languages()
+                            if 'ara' in test_langs:
+                                lang = '+'.join(languages)
+                            else:
+                                self.logger.warning("⚠️ العربية غير متوفرة، استخدام الإنجليزية")
+                                lang = 'eng'
+                        except:
+                            lang = 'eng'
+                    else:
+                        lang = '+'.join(languages)
                 else:
                     lang = languages
 
-            self.logger.info(f"🔍 بدء OCR باللغة: {lang}")
+            self.logger.info(f"🔍 بدء OCR لصورة باللغة: {lang}")
 
-            # استخدام pytesseract مع تعيين المسار مباشرة
+            # تنفيذ OCR
             text = pytesseract.image_to_string(image, lang=lang)
 
+            self.logger.info(f"✅ تم استخراج {len(text)} حرف من الصورة")
             return text.strip()
 
         except Exception as e:
-            self.logger.error(f"❌ خطأ: {e}")
-            # محاولة بالإنجليزية
+            self.logger.error(f"❌ خطأ في OCR الصورة: {e}")
+
+            # محاولة بديلة بالإنجليزية فقط (بدون أي تحذير)
             try:
+                self.logger.info("🔄 محاولة بديلة بالإنجليزية...")
                 text = pytesseract.image_to_string(image, lang='eng')
-                return text.strip() + f"\n\n[⚠️ تم استخدام الإنجليزية]"
-            except:
+                return text.strip()  # بدون تحذير
+            except Exception as e2:
+                self.logger.error(f"❌ فشلت المحاولة البديلة: {e2}")
                 return f"❌ فشل OCR: {str(e)}"
 
     async def ocr_pdf_fast(self, pdf_path: str, languages=None):
+        """
+        استخراج النص من ملف PDF
+        """
         try:
+            # تحديد اللغة - نفس المنطق أعلاه
             if languages is None:
-                lang = self.default_languages
+                lang = 'eng'
+                self.logger.info(f"🔍 استخدام اللغة الافتراضية: {lang}")
             else:
                 if isinstance(languages, list):
-                    lang = '+'.join(languages)
+                    if 'ar' in languages:
+                        try:
+                            test_langs = pytesseract.get_languages()
+                            if 'ara' in test_langs:
+                                lang = '+'.join(languages)
+                            else:
+                                self.logger.warning("⚠️ العربية غير متوفرة، استخدام الإنجليزية")
+                                lang = 'eng'
+                        except:
+                            lang = 'eng'
+                    else:
+                        lang = '+'.join(languages)
                 else:
                     lang = languages
 
-            self.logger.info(f"🔍 بدء OCR لـ PDF باللغة: {lang}")
+            self.logger.info(f"🔍 بدء OCR لملف PDF باللغة: {lang}")
+
+            # تحقق من وجود الملف
+            if not os.path.exists(pdf_path):
+                return "❌ ملف PDF غير موجود"
 
             # تحويل PDF إلى صور
-            pages = convert_from_path(pdf_path)
-            self.logger.info(f"✅ تم تحويل {len(pages)} صفحة")
+            self.logger.info("🔄 جاري تحويل PDF إلى صور...")
+            try:
+                pages = convert_from_path(pdf_path)
+                self.logger.info(f"✅ تم تحويل {len(pages)} صفحة")
+            except Exception as e:
+                self.logger.error(f"❌ فشل تحويل PDF: {e}")
+                return f"❌ فشل تحويل PDF: {str(e)}"
 
             texts = []
             for i, page in enumerate(pages):
                 try:
-                    self.logger.info(f"🔄 معالجة الصفحة {i + 1}")
+                    self.logger.info(f"🔄 معالجة الصفحة {i + 1}/{len(pages)}")
                     page_text = pytesseract.image_to_string(page, lang=lang)
                     texts.append(page_text)
+                    self.logger.info(f"✅ تم استخراج {len(page_text)} حرف من الصفحة {i + 1}")
                 except Exception as e:
                     self.logger.error(f"❌ خطأ في الصفحة {i + 1}: {e}")
                     texts.append(f"[خطأ في الصفحة {i + 1}]")
 
                 await asyncio.sleep(0)
 
-            return "\n".join(texts)
+            result = "\n".join(texts)
+            self.logger.info(f"✅ تم استخراج إجمالي {len(result)} حرف من PDF")
+            return result.strip()
 
         except Exception as e:
-            self.logger.error(f"❌ خطأ: {e}")
-            return f"❌ فشل: {str(e)}"
+            self.logger.error(f"❌ خطأ في معالجة PDF: {e}")
+            return f"❌ فشل معالجة PDF: {str(e)}"
 
     async def check_tesseract_status(self):
         """التحقق من حالة Tesseract"""
