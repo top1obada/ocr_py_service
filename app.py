@@ -34,7 +34,16 @@ async def debug_tesseract():
     status = await ocr.check_tesseract_status()
     return JSONResponse(status)
 
+@app.get("/debug/diagnose")
+async def diagnose():
+    """تشخيص مفصل لمشاكل Tesseract"""
+    result = await ocr.diagnose_tessdata()
+    return JSONResponse(result)
 
 @app.get("/test")
 async def test():
     return {"message": "Hello World"}
+
+@app.get("/")
+async def root():
+    return {"message": "OCR API is running", "endpoints": ["/ocr/image", "/ocr/pdf", "/debug/tesseract", "/debug/diagnose", "/test"]}
