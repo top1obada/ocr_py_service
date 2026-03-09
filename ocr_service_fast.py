@@ -9,7 +9,7 @@ import subprocess
 
 class FastUniversalOCR:
 
-    def init(self):
+    def __init__(self):
 
         self.logger = logging.getLogger("FastUniversalOCR")
         logging.basicConfig(level=logging.INFO)
