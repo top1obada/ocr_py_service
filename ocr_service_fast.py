@@ -56,7 +56,7 @@ class FastUniversalOCR:
             else:
                 if isinstance(languages, list):
                     # تأكد من أن العربية موجودة في القائمة
-                    if 'ar' in languages:
+                    if 'ara' in languages:
                         # جرب العربية أولاً، لكن إذا فشلت استخدم الإنجليزية
                         try:
                             # اختبر إذا كانت العربية تعمل
@@ -104,7 +104,7 @@ class FastUniversalOCR:
                 self.logger.info(f"🔍 استخدام اللغة الافتراضية: {lang}")
             else:
                 if isinstance(languages, list):
-                    if 'ar' in languages:
+                    if 'ara' in languages:
                         try:
                             test_langs = pytesseract.get_languages()
                             if 'ara' in test_langs:

@@ -10,7 +10,7 @@ app = FastAPI(title="Super Fast OCR API with Tesseract")
 ocr = FastUniversalOCR()
 
 @app.post("/ocr/image")
-async def ocr_image(file: UploadFile = File(...), language: str = "ar"):
+async def ocr_image(file: UploadFile = File(...), language: str = "ara"):
     contents = await file.read()
     image = Image.open(io.BytesIO(contents))
     if image.mode in ('RGBA', 'LA', 'P'):
@@ -21,7 +21,7 @@ async def ocr_image(file: UploadFile = File(...), language: str = "ar"):
     return JSONResponse({"text": text, "time": "fast"})
 
 @app.post("/ocr/pdf")
-async def ocr_pdf(file: UploadFile = File(...), language: str = "ar"):
+async def ocr_pdf(file: UploadFile = File(...), language: str = "ara"):
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
         tmp.write(await file.read())
         tmp.flush()
