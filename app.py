@@ -12,7 +12,7 @@ ocr = FastUniversalOCR()
 
 
 @app.post("/ocr/image")
-async def ocr_image(file: UploadFile = File(...), language: str = "eng"):
+async def ocr_image(file: UploadFile = File(...), language: str = None):
 
     contents = await file.read()
 
@@ -37,7 +37,7 @@ async def ocr_image(file: UploadFile = File(...), language: str = "eng"):
 
 
 @app.post("/ocr/pdf")
-async def ocr_pdf(file: UploadFile = File(...), language: str = "ara"):
+async def ocr_pdf(file: UploadFile = File(...), language: str = None):
 
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
 
