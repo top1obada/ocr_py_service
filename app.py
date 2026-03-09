@@ -27,3 +27,9 @@ async def ocr_pdf(file: UploadFile = File(...), language: str = "ar"):
         tmp.flush()
         text = await ocr.ocr_pdf_fast(tmp.name, [language])
     return JSONResponse({"text": text, "time": "fast"})
+
+@app.get("/debug/tesseract")
+async def debug_tesseract():
+    """مسار لتشخيص حالة Tesseract"""
+    status = await ocr.check_tesseract_status()
+    return JSONResponse(status)
