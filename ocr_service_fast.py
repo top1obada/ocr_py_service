@@ -13,42 +13,38 @@ class FastUniversalOCR:
         self.logger = logging.getLogger("FastUniversalOCR")
         self.default_languages = 'ara+eng+fra'
 
-        # تعيين مسار Tesseract
-        os.environ['TESSDATA_PREFIX'] = '/usr/share/tesseract-ocr/5/tessdata/'
+        # تعيين المسار الصحيح بالقوة
+        correct_path = '/usr/share/tesseract-ocr/5/tessdata/'
+        os.environ['TESSDATA_PREFIX'] = correct_path
 
-        # التحقق من التثبيت عند بدء التشغيل
+        # تأكد من وجود الملفات
+        ara_file = os.path.join(correct_path, 'ara.traineddata')
+        if os.path.exists(ara_file):
+            self.logger.info(f"✅ ملف العربية موجود: {ara_file}")
+        else:
+            self.logger.error(f"❌ ملف العربية غير موجود: {ara_file}")
+
+        # اختبار Tesseract
         try:
-            # جرب تشغيل Tesseract للتحقق
-            version = pytesseract.get_tesseract_version()
-            self.logger.info(f"✅ Tesseract version: {version}")
+            # جرب مسار Tesseract
+            result = subprocess.run(['tesseract', '--version'],
+                                    capture_output=True, text=True)
+            self.logger.info(f"✅ Tesseract version: {result.stdout.split(chr(10))[0]}")
 
-            # تحقق من اللغات المتاحة
-            installed_langs = pytesseract.get_languages()
-            self.logger.info(f"✅ اللغات المتاحة: {installed_langs}")
+            # جرب قائمة اللغات
+            langs = subprocess.run(['tesseract', '--list-langs'],
+                                   capture_output=True, text=True)
+            self.logger.info(f"✅ Languages from tesseract: {langs.stdout}")
+
+            # إذا نجح الاختبار، استخدم pytesseract
+            pytesseract.get_tesseract_version()
+            self.logger.info("✅ pytesseract يعمل بشكل صحيح")
 
         except Exception as e:
-            self.logger.error(f"❌ خطأ في التحقق من Tesseract: {e}")
-            # محاولة إصلاح المسار
-            self._fix_tesseract_path()
-
-    def _fix_tesseract_path(self):
-        """محاولة إصلاح مسار Tesseract"""
-        try:
-            # بحث عن ملفات اللغة
-            ara_files = glob.glob('/usr/share/**/ara.traineddata', recursive=True)
-            if ara_files:
-                tessdata_dir = os.path.dirname(ara_files[0])
-                os.environ['TESSDATA_PREFIX'] = tessdata_dir + '/'
-                self.logger.info(f"✅ تم تعيين TESSDATA_PREFIX إلى: {tessdata_dir}")
-        except Exception as e:
-            self.logger.error(f"❌ فشل إصلاح المسار: {e}")
+            self.logger.error(f"❌ خطأ في Tesseract: {e}")
 
     async def ocr_image_fast(self, image: Image.Image, languages=None):
-        """
-        استخراج النص من صورة
-        """
         try:
-            # تحديد اللغة
             if languages is None:
                 lang = self.default_languages
             else:
@@ -57,32 +53,24 @@ class FastUniversalOCR:
                 else:
                     lang = languages
 
-            self.logger.info(f"🔍 بدء OCR لصورة باللغة: {lang}")
+            self.logger.info(f"🔍 بدء OCR باللغة: {lang}")
 
-            # تنفيذ OCR
+            # استخدام pytesseract مع تعيين المسار مباشرة
             text = pytesseract.image_to_string(image, lang=lang)
 
-            self.logger.info(f"✅ تم استخراج {len(text)} حرف من الصورة")
             return text.strip()
 
         except Exception as e:
-            self.logger.error(f"❌ خطأ في OCR الصورة: {e}")
-
-            # محاولة بديلة بالإنجليزية فقط
+            self.logger.error(f"❌ خطأ: {e}")
+            # محاولة بالإنجليزية
             try:
-                self.logger.info("🔄 محاولة بديلة بالإنجليزية...")
                 text = pytesseract.image_to_string(image, lang='eng')
-                return text.strip() + f"\n\n[⚠️ تحذير: تم استخدام الإنجليزية بدلاً من {lang}]"
-            except Exception as e2:
-                self.logger.error(f"❌ فشلت المحاولة البديلة: {e2}")
+                return text.strip() + f"\n\n[⚠️ تم استخدام الإنجليزية]"
+            except:
                 return f"❌ فشل OCR: {str(e)}"
 
     async def ocr_pdf_fast(self, pdf_path: str, languages=None):
-        """
-        استخراج النص من ملف PDF
-        """
         try:
-            # تحديد اللغة
             if languages is None:
                 lang = self.default_languages
             else:
@@ -91,54 +79,37 @@ class FastUniversalOCR:
                 else:
                     lang = languages
 
-            self.logger.info(f"🔍 بدء OCR لملف PDF باللغة: {lang}")
-
-            # تحقق من وجود الملف
-            if not os.path.exists(pdf_path):
-                return "❌ ملف PDF غير موجود"
+            self.logger.info(f"🔍 بدء OCR لـ PDF باللغة: {lang}")
 
             # تحويل PDF إلى صور
-            self.logger.info("🔄 جاري تحويل PDF إلى صور...")
-            try:
-                pages = convert_from_path(pdf_path)
-                self.logger.info(f"✅ تم تحويل {len(pages)} صفحة")
-            except Exception as e:
-                self.logger.error(f"❌ فشل تحويل PDF: {e}")
-                return f"❌ فشل تحويل PDF: {str(e)}"
+            pages = convert_from_path(pdf_path)
+            self.logger.info(f"✅ تم تحويل {len(pages)} صفحة")
 
             texts = []
             for i, page in enumerate(pages):
                 try:
-                    self.logger.info(f"🔄 معالجة الصفحة {i + 1}/{len(pages)}")
+                    self.logger.info(f"🔄 معالجة الصفحة {i + 1}")
                     page_text = pytesseract.image_to_string(page, lang=lang)
                     texts.append(page_text)
-                    self.logger.info(f"✅ تم استخراج {len(page_text)} حرف من الصفحة {i + 1}")
                 except Exception as e:
                     self.logger.error(f"❌ خطأ في الصفحة {i + 1}: {e}")
-                    texts.append(f"[خطأ في الصفحة {i + 1}: {str(e)}]")
+                    texts.append(f"[خطأ في الصفحة {i + 1}]")
 
-                await asyncio.sleep(0)  # للسماح بالتبديل بين المهام
+                await asyncio.sleep(0)
 
-            result = "\n".join(texts)
-            self.logger.info(f"✅ تم استخراج إجمالي {len(result)} حرف من PDF")
-            return result.strip()
+            return "\n".join(texts)
 
         except Exception as e:
-            self.logger.error(f"❌ خطأ في معالجة PDF: {e}")
-            return f"❌ فشل معالجة PDF: {str(e)}"
+            self.logger.error(f"❌ خطأ: {e}")
+            return f"❌ فشل: {str(e)}"
 
     async def check_tesseract_status(self):
-        """
-        التحقق من حالة Tesseract (للتشخيص)
-        """
+        """التحقق من حالة Tesseract"""
         result = {
-            "status": "unknown",
             "tesseract_version": None,
             "languages": [],
             "tessdata_prefix": os.environ.get('TESSDATA_PREFIX', 'غير معرف'),
             "ara_file_exists": False,
-            "ara_file_path": None,
-            "possible_paths": [],
             "error": None
         }
 
@@ -146,76 +117,17 @@ class FastUniversalOCR:
             # نسخة Tesseract
             version = subprocess.run(['tesseract', '--version'],
                                      capture_output=True, text=True)
-            result["tesseract_version"] = version.stdout.split('\n')[0] if version.stdout else None
+            result["tesseract_version"] = version.stdout.split('\n')[0]
 
             # اللغات المثبتة
             langs = subprocess.run(['tesseract', '--list-langs'],
                                    capture_output=True, text=True)
             if langs.stdout:
-                lines = langs.stdout.strip().split('\n')
-                if len(lines) > 1:
-                    result["languages"] = lines[1:]  # أول سطر هو العنوان
-
-            # البحث عن كل ملفات اللغة
-            result["possible_paths"] = glob.glob('/usr/share/**/ara.traineddata', recursive=True)
+                result["languages"] = [l for l in langs.stdout.strip().split('\n') if l][1:]
 
             # هل ملف العربية موجود؟
-            for path in result["possible_paths"]:
-                if os.path.exists(path):
-                    result["ara_file_exists"] = True
-                    result["ara_file_path"] = path
-                    break
-
-            result["status"] = "✅ يعمل" if result["languages"] else "⚠️ مشكلة"
-
-        except Exception as e:
-            result["error"] = str(e)
-            result["status"] = "❌ خطأ"
-
-        return result
-
-    async def diagnose_tessdata(self):
-        """
-        تشخيص مشاكل مسار tessdata بشكل مفصل
-        """
-        result = {
-            "tesseract_version": None,
-            "installed_langs": [],
-            "tessdata_prefix": os.environ.get('TESSDATA_PREFIX', 'غير معرف'),
-            "possible_tessdata_paths": [],
-            "ara_files_found": [],
-            "working_path": None,
-            "error": None
-        }
-
-        try:
-            # نسخة Tesseract
-            version = subprocess.run(['tesseract', '--version'],
-                                     capture_output=True, text=True)
-            result["tesseract_version"] = version.stdout.split('\n')[0] if version.stdout else None
-
-            # بحث عن كل مجلدات tessdata
-            result["possible_tessdata_paths"] = glob.glob('/usr/share/**/tessdata', recursive=True)
-
-            # بحث عن ملف العربية
-            result["ara_files_found"] = glob.glob('/usr/share/**/ara.traineddata', recursive=True)
-
-            # محاولة تشغيل tesseract مع مسارات مختلفة
-            for path in result["possible_tessdata_paths"]:
-                try:
-                    # تعيين المسار مؤقتاً
-                    env = os.environ.copy()
-                    env['TESSDATA_PREFIX'] = path + '/'
-
-                    test_result = subprocess.run(['tesseract', '--list-langs'],
-                                                 env=env,
-                                                 capture_output=True, text=True)
-                    if test_result.returncode == 0:
-                        result["working_path"] = path
-                        result["working_langs"] = test_result.stdout.strip().split('\n')[1:]
-                        break
-                except:
-                    continue
+            ara_path = '/usr/share/tesseract-ocr/5/tessdata/ara.traineddata'
+            result["ara_file_exists"] = os.path.exists(ara_path)
 
         except Exception as e:
             result["error"] = str(e)
