@@ -12,7 +12,7 @@ ocr = FastUniversalOCR()
 
 
 @app.post("/ocr/image")
-async def ocr_image(file: UploadFile = File(...), language: str = "ara"):
+async def ocr_image(file: UploadFile = File(...), language: str = "eng"):
 
     contents = await file.read()
 
